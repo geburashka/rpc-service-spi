@@ -1,5 +1,5 @@
 author: mongoose-os
-description: RPC I2C Service support
+description: RPC SPI Service support
 type: lib
 version: 1.0
 manifest_version: 2017-09-29
@@ -8,10 +8,10 @@ sources:
 includes:
   - include
 libs:
-  - origin: https://github.com/mongoose-os-libs/i2c
+  - origin: https://github.com/mongoose-os-libs/spi
   - origin: https://github.com/mongoose-os-libs/rpc-common
 tags:
   - rpc
-  - i2c
+  - spi
   - c
-  - docs:rpc:Service - I2C
+  - docs:rpc:Service - SPI
