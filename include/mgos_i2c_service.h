@@ -26,7 +26,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-bool mgos_rpc_service_i2c_init(void);
+bool mgos_rpc_service_spi_init(void);
 
 #ifdef __cplusplus
 }
