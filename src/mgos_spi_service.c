@@ -34,8 +34,8 @@ static void spi_run_txn_handler(struct mg_rpc_request_info *ri, void *cb_arg,
   const char *err_msg = NULL;
   struct mgos_spi *spi;
 
-/*
   json_scanf(args.p, args.len, ri->args_fmt, &bus, &addr, &len, &data);
+/*
   if (addr < 0 || data == NULL) {
     err_code = 400;
     err_msg = "addr and data_hex are required";
