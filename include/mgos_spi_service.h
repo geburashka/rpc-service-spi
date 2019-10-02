@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_SRC_MGOS_I2C_SERVICE_H_
-#define CS_FW_SRC_MGOS_I2C_SERVICE_H_
+#ifndef CS_FW_SRC_MGOS_SPI_SERVICE_H_
+#define CS_FW_SRC_MGOS_SPI_SERVICE_H_
 
 #include "mgos_features.h"
 
@@ -32,4 +32,4 @@ bool mgos_rpc_service_spi_init(void);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_I2C_SERVICE_H_ */
+#endif /* CS_FW_SRC_MGOS_SPI_SERVICE_H_ */
