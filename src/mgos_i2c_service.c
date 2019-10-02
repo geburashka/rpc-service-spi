@@ -25,36 +25,62 @@
 #include "common/mg_str.h"
 
 
-static void spi_write_handler(struct mg_rpc_request_info *ri, void *cb_arg,
-                              struct mg_rpc_frame_info *fi,
-                              struct mg_str args) {
+static void spi_run_txn_handler(struct mg_rpc_request_info *ri, void *cb_arg,
+                                struct mg_rpc_frame_info *fi,
+                                struct mg_str args) {
   int bus = 0, addr = -1, len = -1;
   uint8_t *data = NULL;
   int err_code = 0;
   const char *err_msg = NULL;
   struct mgos_spi *spi;
+
+/*
   json_scanf(args.p, args.len, ri->args_fmt, &bus, &addr, &len, &data);
   if (addr < 0 || data == NULL) {
     err_code = 400;
     err_msg = "addr and data_hex are required";
     goto out;
   }
-  spi = mgos_spi_get_bus(bus);
+*/
+
+  spi = mgos_spi_get_global();
   if (spi == NULL) {
     err_code = 503;
-    err_msg = "I2C is disabled";
+    err_msg = "SPI is disabled";
     goto out;
   }
-  if (!mgos_spi_write(spi, addr, data, len, true /* stop */)) {
+
+  struct mgos_spi_txn txn = {
+    .cs = 0,
+    .mode = 0,
+    .freq = 10000000,
+  };
+
+  uint8_t tx_data[1] = {0x9f};
+  uint8_t rx_data[3] = {0, 0, 0};
+
+  /* Half-duplex, command/response transaction setup */
+  bool fd = false;
+  /* Transmit 1 byte from tx_data. */
+  txn.hd.tx_len = 0;
+  txn.hd.tx_data = tx_data;
+  /* No dummy bytes necessary. */
+  txn.hd.dummy_len = 0;
+  /* Receive 3 bytes into rx_data. */
+  txn.hd.rx_len = 3;
+  txn.hd.rx_data = rx_data;
+
+  if (!mgos_spi_run_txn(spi, fd, &txn)) {
     err_code = 503;
-    err_msg = "I2C write failed";
+    err_msg = "SPI write failed";
   }
+
 out:
   if (data != NULL) free(data);
   if (err_code != 0) {
     mg_rpc_send_errorf(ri, err_code, "%s", err_msg);
   } else {
-    mg_rpc_send_responsef(ri, NULL);
+    mg_rpc_send_responsef(ri, "{rx_data: %H}", txn.hd.rx_len, txn.hd.rx_data);
   }
   ri = NULL;
   (void) cb_arg;
@@ -64,10 +90,7 @@ out:
 
 bool mgos_rpc_service_spi_init(void) {
   struct mg_rpc *c = mgos_rpc_get_global();
-  mg_rpc_add_handler(c, "I2C.Scan", "{bus: %d}", spi_scan_handler, NULL);
-  mg_rpc_add_handler(c, "I2C.Read", "{bus: %d, addr: %d, len: %d}",
-                     spi_read_handler, NULL);
-  mg_rpc_add_handler(c, "I2C.Write", "{bus: %d, addr: %d, data_hex: %H}",
-                     spi_write_handler, NULL);
+  mg_rpc_add_handler(c, "SPI.Run", "{len: %d}",
+                     spi_run_txn_handler, NULL);
   return true;
 }
