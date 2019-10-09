@@ -17,6 +17,7 @@
 
 #include <stdlib.h>
 
+#include "mgos.h"
 #include "mgos_rpc.h"
 #include "mgos_spi.h"
 #include "mgos_hal.h"
@@ -28,13 +29,16 @@
 static void spi_run_txn_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                                 struct mg_rpc_frame_info *fi,
                                 struct mg_str args) {
-  int bus = 0, addr = -1, len = -1;
+  int len = -1, rx_len = 1;
   uint8_t *data = NULL;
   int err_code = 0;
   const char *err_msg = NULL;
   struct mgos_spi *spi;
 
-  json_scanf(args.p, args.len, ri->args_fmt, &bus, &addr, &len, &data);
+  json_scanf(args.p, args.len, ri->args_fmt, &len, &data, &rx_len);
+  //LOG(LL_INFO, ("spi sending: %s, len: %d", data, len));
+  //mg_rpc_send_responsef(ri, "{rx_data: %H, len: %d, rx_len: %d}", len, data, len, rx_len);
+
 /*
   if (addr < 0 || data == NULL) {
     err_code = 400;
@@ -53,21 +57,26 @@ static void spi_run_txn_handler(struct mg_rpc_request_info *ri, void *cb_arg,
   struct mgos_spi_txn txn = {
     .cs = 0,
     .mode = 0,
-    .freq = 10000000,
+    .freq = 1000 * 1000,
   };
 
-  uint8_t tx_data[1] = {0x9f};
-  uint8_t rx_data[3] = {0, 0, 0};
+  uint8_t* tx_data = data;
+  uint8_t* rx_data;
+
+  rx_data = malloc( sizeof( uint8_t ) * len );
+  for ( int i = 0 ; i < len ; i += 1 ) {
+    rx_data[ i ] = 0 ;
+  }
 
   /* Half-duplex, command/response transaction setup */
   bool fd = false;
   /* Transmit 1 byte from tx_data. */
-  txn.hd.tx_len = 0;
+  txn.hd.tx_len = len;
   txn.hd.tx_data = tx_data;
   /* No dummy bytes necessary. */
   txn.hd.dummy_len = 0;
   /* Receive 3 bytes into rx_data. */
-  txn.hd.rx_len = 3;
+  txn.hd.rx_len = rx_len;
   txn.hd.rx_data = rx_data;
 
   if (!mgos_spi_run_txn(spi, fd, &txn)) {
@@ -81,6 +90,7 @@ out:
     mg_rpc_send_errorf(ri, err_code, "%s", err_msg);
   } else {
     mg_rpc_send_responsef(ri, "{rx_data: %H}", txn.hd.rx_len, txn.hd.rx_data);
+  //mg_rpc_send_responsef(ri, "{rx_data: %H, len: %d, rx_len: %d}", len, data, len, rx_len);
   }
   ri = NULL;
   (void) cb_arg;
@@ -90,7 +100,7 @@ out:
 
 bool mgos_rpc_service_spi_init(void) {
   struct mg_rpc *c = mgos_rpc_get_global();
-  mg_rpc_add_handler(c, "SPI.Run", "{len: %d}",
+  mg_rpc_add_handler(c, "SPI.Write", "{data: %H, len: %d}",
                      spi_run_txn_handler, NULL);
   return true;
 }
